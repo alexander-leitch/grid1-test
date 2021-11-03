@@ -1,0 +1,24 @@
+version: '2'
+services:
+  grid1:
+    build:
+      context: ./
+      dockerfile: Dockerfiles/local
+    working_dir: /var/www
+    volumes:
+      - ./app:/var/www
+      - /var/www/vendor
+    environment:
+      - "ELASTIC_SEARCH_HOST=host.docker.internal:9200"
+      - COMPOSER_ALLOW_SUPERUSER=1
+    ports:
+      - 8000:80
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_DATABASE: 'grid'
+      MYSQL_USER: 'sail'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: 'password'
+    volumes:
+      - ./db:/var/lib/mysql

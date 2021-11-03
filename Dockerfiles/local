@@ -1,0 +1,20 @@
+FROM php:7.4-cli
+
+RUN apt-get update -y && apt-get install -y libonig-dev openssl zip unzip git libzip-dev zlib1g-dev libfreetype6-dev libjpeg62-turbo-dev vim
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN docker-php-ext-install pdo mbstring bcmath zip
+RUN pecl install xdebug-2.8.1 && docker-php-ext-enable xdebug
+
+RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
+
+EXPOSE 80
+WORKDIR /var/www
+COPY ./app /var/www
+
+RUN git config --global url."https://github.com/".insteadOf git@github.com:
+RUN git config --global url."https://".insteadOf git://
+
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN composer install --no-interaction
+
+CMD php artisan serve --host=0.0.0.0 --port=80
