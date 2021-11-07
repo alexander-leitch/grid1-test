@@ -17,8 +17,8 @@ class CreateFilesTable extends Migration
           $table->id();
           $table->string('name')->nullable();
           $table->string('file_path')->nullable();
-          $table->int('completed_rows')->nullable();
-          $table->string('completed')->nullable();
+          $table->integer('completed_rows')->default(0);
+          $table->boolean('completed')->default(false);
           $table->timestamps();
         });
     }

@@ -9,8 +9,12 @@ services:
       - ./app:/var/www
       - /var/www/vendor
     environment:
-      - "ELASTIC_SEARCH_HOST=host.docker.internal:9200"
       - COMPOSER_ALLOW_SUPERUSER=1
+      - DB_HOST=host.docker.internal
+      - DB_PORT=3308
+      - DB_DATABASE=grid
+      - DB_USERNAME=root
+      - DB_PASSWORD='password'
     ports:
       - 8000:80
   mysql:
@@ -22,3 +26,5 @@ services:
       MYSQL_ROOT_PASSWORD: 'password'
     volumes:
       - ./db:/var/lib/mysql
+    ports:
+      - 3308:3306
