@@ -16,7 +16,7 @@ class ManageController extends Controller {
       return strpos($item, '.json');
     });
     foreach($files as $key => $file){
-      $details = File::where('name', $file)->find(1);
+      $details = File::where('name', $file)->first();
       if($details) {
         $files[$key] = $details->toArray();
       } else {
@@ -31,13 +31,14 @@ class ManageController extends Controller {
     header('Cache-Control: no-cache');
     $exists = Storage::disk('uploads')->exists($filename);
     if($exists) {
-      $file = File::where('name', $filename)->find(1);
+      $file = File::where('name', $filename)->first();
       if(!$file){
-        $file = File::insert(['name' => $filename, 'completed_rows' => 0]);
+        $file = File::firstOrCreate(
+          ['name' => $filename],
+          ['completed_rows' => 0]
+        );
         if(!$file){
-          $this->send_message('CLOSE', 'Error', 0);
-        } else {
-          $file = File::where('name', $filename)->find(1);
+          $this->send_message('CLOSE', 'Error creating file.', 0);
         }
       }
       
@@ -45,7 +46,7 @@ class ManageController extends Controller {
       $json_file = Storage::disk('uploads')->get($filename);
       $json = json_decode($json_file);
       $json_total = count($json)-1;
-      $start_from = ($file['completed_rows'] == 0) ? 0 : $file['completed_rows']+1;
+      $start_from = (isset($file['completed_rows']) && $file['completed_rows'] == 0) ? 0 : $file['completed_rows']+1;
       // TODO end section.
       
       if($json_total == $start_from) {
@@ -62,7 +63,7 @@ class ManageController extends Controller {
           $age = date_diff(date_create(date('Y-m-d H:i:s', strtotime($purchase['date_of_birth']))), date_create('now'))->y;
           if($purchase['date_of_birth'] == '' || ($age >= 18 && $age <= 65)) {
             
-            $lookup = Purchase::where($purchase)->find(1);
+            $lookup = Purchase::where($purchase)->first();
             if($lookup) {
               // Duplicate, ignore.
               $file->completed_rows = $i;
