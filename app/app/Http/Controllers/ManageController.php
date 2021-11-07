@@ -7,6 +7,7 @@ use App\Models\File;
 use App\Models\Purchase;
 use App\Models\Cards;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ManageController extends Controller {
   /**
@@ -20,7 +21,7 @@ class ManageController extends Controller {
     });
     foreach($files as $key => $file){
       $details = File::where('name', $file)->find(1);
-      if($details->exists()) {
+      if($details) {
         $files[$key] = $details->toArray();
       } else {
         $files[$key] = ['name' => $file];
@@ -34,70 +35,60 @@ class ManageController extends Controller {
     header('Cache-Control: no-cache');
     $exists = Storage::disk('uploads')->exists($filename);
     if($exists) {
-      
       $file = File::where('name', $filename)->find(1);
-      print_r($file);
-      if($file->count() == 0){
-        $file = File::insert(['name' => $filename]);
-        if(!$file->exists()){
+      if(!$file){
+        $file = File::insert(['name' => $filename, 'completed_rows' => 0]);
+        if(!$file){
           $this->send_message('CLOSE', 'Error', 0);
+        } else {
+          $file = File::where('name', $filename)->find(1);
         }
       }
       
+      // TODO Update this section to change for different types of imput files
       $json_file = Storage::disk('uploads')->get($filename);
       $json = json_decode($json_file);
+      $json_total = count($json)-1;
+      $start_from = ($file['completed_rows'] == 0) ? 0 : $file['completed_rows']+1;
+      // TODO end section.
       
-      for ($i = $file['completed_rows']; $i <= count($json); $i++) {
-        $item = $json[$i];
-      // foreach($json as $i => $item) {
-        
-        $purchase = (array) $item;
-        unset($purchase['credit_card']);
-        $credit_card = (array) $item->credit_card;
-        $purchase['date_of_birth'] = date('Y-m-d H:i:s', strtotime($purchase['date_of_birth']));
-        $purchaseID = Purchase::insertGetId($purchase);
-        $credit_card['purchase_id'] = $purchaseID;
-        // $credit_card['number'] = Cards::encrypt($credit_card['number'], 'password');
-        $card = Cards::updateOrInsert($credit_card);
-        if($card){
-          $file->completed_rows = $i;
-          if($i == count($json)) {
-            $file->completed = true;
+      if($json_total == $start_from) {
+        // Already Completed
+        $file->completed = 1;
+        $file->save();
+        $this->send_message('CLOSE', ' Already Completed file. ', 100); 
+      } else {
+        for ($i = $start_from; $i <= $json_total; $i++) {
+          $item = $json[$i];
+          $purchase = (array) $item;
+          unset($purchase['credit_card']);
+          $credit_card = (array) $item->credit_card;
+          $age = date_diff(date_create(date('Y-m-d H:i:s', strtotime($purchase['date_of_birth']))), date_create('now'))->y;
+          if($age >= 18 && $age <= 65) {
+            DB::beginTransaction();
+            // TODO Additional check section
+            $purchaseID = Purchase::insertGetId($purchase);
+            $credit_card['purchase_id'] = $purchaseID;
+            $card = Cards::updateOrInsert($credit_card);
+            if($card){
+              $file->completed_rows = $i;
+              $file->save();
+              $this->send_message($i, $item->name . ' on iteration ' . $i . ' of ' . $json_total , round(($i/$json_total)*100, 2)); 
+            }
+            DB::commit();
+          } else {
+            $file->completed_rows = $i;
+            $file->save();
+            $this->send_message($i, $item->name . ' too young ' . $i . ' of ' . $json_total , round(($i/$json_total)*100, 2)); 
           }
-          $file->save();
-          $this->send_message($i, $item->name . ' on iteration ' . $i . ' of ' . count($json) , round(($i/count($json))*100, 2)); 
         }
-        
-        
-        /*
-stdClass Object
-(
-    [name] => Prof. Simeon Green
-    [address] => 328 Bergstrom Heights Suite 709 49592 Lake Allenville
-    [checked] => 
-    [description] => Voluptatibus nihil dolor quaerat. Reprehenderit est molestias quia nihil consectetur voluptatum et.<br>Ea officiis ex ea suscipit dolorem. Ut ab vero fuga.<br>Quam ipsum nisi debitis repudiandae quibusdam. Sint quisquam vitae rerum nobis.
-    [interest] => 
-    [date_of_birth] => 1989-03-21T01:11:13+00:00
-    [email] => nerdman@cormier.net
-    [account] => 556436171909
-    [credit_card] => stdClass Object
-        (
-            [type] => Visa
-            [number] => 4532383564703
-            [name] => Brooks Hudson
-            [expirationDate] => 12/19
-        )
-
-)
-        */
-        
-        
       }
     } else {
       $this->send_message('CLOSE', 'No File', 0);
     }
+    $file->completed = 1;
+    $file->save();
     $this->send_message('CLOSE', 'Process complete', 100);
-    
   }
   
   function send_message($id, $message, $progress) {
