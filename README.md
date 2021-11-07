@@ -7,3 +7,4 @@
 	
 	#Upload json files
 	app/storage/uploads
+	
