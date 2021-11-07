@@ -15,77 +15,59 @@ class ManageController extends Controller {
    * @return \Illuminate\Http\Response
    */
   public function index(Request $req) {
-    
-    if($req) {
-      
-      $exists = Storage::disk('uploads')->exists($req->file);
-      if($exists) {
-        $file = Storage::disk('uploads')->get($req->file);
-        // dd(json_decode($file)[0]);
-        foreach(json_decode($file) as $item) {
-          print_r($item);
-          die();
-        }
-        // $json = json_encode($file, true);
-        // echo $json;
-        // dd($req->file);
-      }
-
-    }
-    
-    // $contents = Storage::get('/');
-    // $directory = storage_path('app');
-    // dump($directory);
-    // $files = Storage::disk('public')->files($directory);
-    
     $files = array_filter(Storage::disk('uploads')->files(), function ($item) {
-      dump($item);
-      $check = File::where('name', $item)->take(1)->get();
-      return $check;
+      return strpos($item, '.json');
     });
-    
+    foreach($files as $key => $file){
+      $details = File::where('name', $file)->find(1);
+      if($details->exists()) {
+        $files[$key] = $details->toArray();
+      } else {
+        $files[$key] = ['name' => $file];
+      }
+    }
     return $this->template('welcome', compact('files'));
   }
   
-  public function process($file = null) {
+  public function process($filename = null) {
     header('Content-Type: text/event-stream');
     header('Cache-Control: no-cache');
-    $exists = Storage::disk('uploads')->exists($file);
+    $exists = Storage::disk('uploads')->exists($filename);
     if($exists) {
       
-      $check = File::where('name', $file)->take(1)->get();
-      // dump($check);
-      if($check->count() == 0){
-        $check = File::insert(['name' => $file]);
-        dd($check->exists());
+      $file = File::where('name', $filename)->find(1);
+      print_r($file);
+      if($file->count() == 0){
+        $file = File::insert(['name' => $filename]);
+        if(!$file->exists()){
+          $this->send_message('CLOSE', 'Error', 0);
+        }
       }
-      // $this->send_message(0, $check->name, 0);
       
-      $file = Storage::disk('uploads')->get($file);
-      foreach(json_decode($file) as $i => $item) {
+      $json_file = Storage::disk('uploads')->get($filename);
+      $json = json_decode($json_file);
+      
+      for ($i = $file['completed_rows']; $i <= count($json); $i++) {
+        $item = $json[$i];
+      // foreach($json as $i => $item) {
         
         $purchase = (array) $item;
         unset($purchase['credit_card']);
         $credit_card = (array) $item->credit_card;
-        
-        $purchase['date_of_birth'] = strtotime($purchase['date_of_birth']);
-        print_r($purchase);
-        print_r($credit_card);
-        
+        $purchase['date_of_birth'] = date('Y-m-d H:i:s', strtotime($purchase['date_of_birth']));
         $purchaseID = Purchase::insertGetId($purchase);
         $credit_card['purchase_id'] = $purchaseID;
         // $credit_card['number'] = Cards::encrypt($credit_card['number'], 'password');
         $card = Cards::updateOrInsert($credit_card);
         if($card){
-          echo 'Good';
+          $file->completed_rows = $i;
+          if($i == count($json)) {
+            $file->completed = true;
+          }
+          $file->save();
+          $this->send_message($i, $item->name . ' on iteration ' . $i . ' of ' . count($json) , round(($i/count($json))*100, 2)); 
         }
         
-        print_r($purchaseID);
-        print_r($card);
-        
-        
-        
-        die();
         
         /*
 stdClass Object
@@ -109,7 +91,7 @@ stdClass Object
 )
         */
         
-        $this->send_message($i, $item->name . ' on iteration ' . $i . ' of ' . count(json_decode($file)) , round(($i/count(json_decode($file)))*100, 2)); 
+        
       }
     } else {
       $this->send_message('CLOSE', 'No File', 0);

@@ -22,7 +22,7 @@ class CreateCardsTable extends Migration
             $table->bigInteger('number')->nullable();
             $table->string('expirationDate')->nullable();
             
-            $table->timestamps();
+            $table->nullableTimestamps();
         });
     }
 

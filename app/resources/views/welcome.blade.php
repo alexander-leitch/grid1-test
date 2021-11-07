@@ -55,16 +55,16 @@
                                         <form action="/" method="post" enctype="multipart/form-data">
                                           @csrf
                                           <tr>
-                                            <td>{{$item}}<input type="hidden" name="file" value="{{$item}}"></td>
+                                            <td>{{$item['name']}}<input type="hidden" name="file" value="{{$item['name']}}"></td>
                                             <td>
-                                              <input type="button" onclick="startTask({{$key}}, '{{$item}}');"  value="Start Task" />
-                                              <input type="button" onclick="stopTask({{$key}}, '{{$item}}');"  value="Stop Task" />
+                                              <input type="button" onclick="startTask({{$key}}, '{{$item['name']}}');"  value="{{($item['completed_rows'] && $item['completed_rows'] >= 1) ? 'Resume' : 'Start' }} Task" />
+                                              <input type="button" onclick="stopTask({{$key}}, '{{$item['name']}}');"  value="Stop Task" />
                                             </td>
                                             <td>
                                               <progress id='{{$key}}_progressor' value="0" max='100' style=""></progress>
                                             </td>
                                             <td>
-                                              <span id="{{$key}}_percentage" style="text-align:right; display:block; margin-top:5px;">0</span>
+                                              <span id="{{$key}}_percentage" style="text-align:right; display:block; margin-top:5px;">-</span>
                                             </td>
                                           </tr>
                                         </form>

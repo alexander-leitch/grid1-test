@@ -19,13 +19,13 @@ class CreatePurchasesTable extends Migration
             $table->string('name')->nullable();
             $table->string('address')->nullable();
             $table->boolean('checked')->default(false);
-            $table->string('description')->nullable();
+            $table->longText('description')->nullable();
             $table->string('interest')->nullable();
-            $table->timestamp('date_of_birth')->nullable();
+            $table->dateTime('date_of_birth')->nullable();
             $table->string('email')->nullable();
             $table->bigInteger('account')->nullable();
             
-            $table->timestamps();
+            $table->nullableTimestamps();
         });
     }
 
