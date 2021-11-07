@@ -68,12 +68,13 @@ class ManageController extends Controller {
         unset($purchase['credit_card']);
         $credit_card = (array) $item->credit_card;
         
+        $purchase['date_of_birth'] = strtotime($purchase['date_of_birth']);
         print_r($purchase);
         print_r($credit_card);
         
         $purchaseID = Purchase::insertGetId($purchase);
         $credit_card['purchase_id'] = $purchaseID;
-        $credit_card['number'] = Cards::encrypt($credit_card['number'], 'password');
+        // $credit_card['number'] = Cards::encrypt($credit_card['number'], 'password');
         $card = Cards::updateOrInsert($credit_card);
         if($card){
           echo 'Good';

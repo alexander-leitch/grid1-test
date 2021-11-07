@@ -19,7 +19,7 @@ class CreateCardsTable extends Migration
             
             $table->string('type')->nullable();
             $table->string('name')->nullable();
-            $table->integer('number')->nullable();
+            $table->bigInteger('number')->nullable();
             $table->string('expirationDate')->nullable();
             
             $table->timestamps();

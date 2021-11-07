@@ -21,9 +21,9 @@ class CreatePurchasesTable extends Migration
             $table->boolean('checked')->default(false);
             $table->string('description')->nullable();
             $table->string('interest')->nullable();
-            $table->string('date_of_birth')->nullable();
+            $table->timestamp('date_of_birth')->nullable();
             $table->string('email')->nullable();
-            $table->string('account')->nullable();
+            $table->bigInteger('account')->nullable();
             
             $table->timestamps();
         });
