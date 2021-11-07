@@ -10,11 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
 class ManageController extends Controller {
-  /**
-   * Display a listing of the resource.
-   *
-   * @return \Illuminate\Http\Response
-   */
+
   public function index(Request $req) {
     $files = array_filter(Storage::disk('uploads')->files(), function ($item) {
       return strpos($item, '.json');
@@ -64,18 +60,30 @@ class ManageController extends Controller {
           unset($purchase['credit_card']);
           $credit_card = (array) $item->credit_card;
           $age = date_diff(date_create(date('Y-m-d H:i:s', strtotime($purchase['date_of_birth']))), date_create('now'))->y;
-          if($age >= 18 && $age <= 65) {
-            DB::beginTransaction();
-            // TODO Additional check section
-            $purchaseID = Purchase::insertGetId($purchase);
-            $credit_card['purchase_id'] = $purchaseID;
-            $card = Cards::updateOrInsert($credit_card);
-            if($card){
+          if($purchase['date_of_birth'] == '' || ($age >= 18 && $age <= 65)) {
+            
+            $lookup = Purchase::where($purchase)->find(1);
+            if($lookup) {
+              // Duplicate, ignore.
               $file->completed_rows = $i;
               $file->save();
-              $this->send_message($i, $item->name . ' on iteration ' . $i . ' of ' . $json_total , round(($i/$json_total)*100, 2)); 
+              $this->send_message($i, $purchase['name'] . ' DUPLICATE on iteration ' . $i . ' of ' . $json_total , round(($i/$json_total)*100, 2)); 
+            } else {
+              
+              DB::beginTransaction();
+              // TODO Additional check section
+              $purchaseID = Purchase::insertGetId($purchase);
+              $credit_card['purchase_id'] = $purchaseID;
+              $card = Cards::updateOrInsert($credit_card);
+              if($card){
+                $file->completed_rows = $i;
+                $file->save();
+                $this->send_message($i, $item->name . ' on iteration ' . $i . ' of ' . $json_total , round(($i/$json_total)*100, 2)); 
+              }
+              DB::commit();
+              
             }
-            DB::commit();
+            
           } else {
             $file->completed_rows = $i;
             $file->save();
@@ -92,12 +100,12 @@ class ManageController extends Controller {
   }
   
   function send_message($id, $message, $progress) {
-      $d = array('message' => $message , 'progress' => $progress);
-      echo "id: $id" . PHP_EOL;
-      echo "data: " . json_encode($d) . PHP_EOL;
-      echo PHP_EOL;
-     
-      ob_flush();
-      flush();
+    $d = array('message' => $message , 'progress' => $progress);
+    echo "id: $id" . PHP_EOL;
+    echo "data: " . json_encode($d) . PHP_EOL;
+    echo PHP_EOL;
+   
+    ob_flush();
+    flush();
   }
 }
